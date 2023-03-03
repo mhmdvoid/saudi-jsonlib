@@ -99,6 +99,11 @@ bool Parser::parseJsonDecl() {
             
         } while(skip(curPtr, ','));
     }
+    
+    if (!skip(curPtr, '}')) {
+        return true;
+    }
+    assert(*curPtr == '\0' && "json ends!");
     return false;
 }
 
@@ -146,7 +151,7 @@ bool Parser::parseJsonValue() {
             break;
     }
     
-    return true;
+    return false;
 }
 void Parser::parseJsonString()  {}
 void Parser::parseJsonObject()  {}

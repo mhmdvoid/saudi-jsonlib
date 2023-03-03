@@ -9,7 +9,7 @@
 #include "Parser.h"
 int main(int argc, const char * argv[]) {
     
-    saudi_json::Parser parser {"{ \"foo\": truer"};
+    saudi_json::Parser parser {"{ \"foo\": true, \"valid\": false }"};
     parser.parseJsonDecl();
     return 0;
 }
