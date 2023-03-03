@@ -1,0 +1,7 @@
+
+
+Later we do all sort of json maniuplation:
+    - to_lang object mapping
+    - Row to object label value format
+    - Abstract Tree for json string
+    - etc ..
