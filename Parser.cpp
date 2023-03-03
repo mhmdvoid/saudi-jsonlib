@@ -162,11 +162,11 @@ bool Parser::parseJsonBooleanLiteral() {
         return true;
     
     while (validJsonKey(*curPtr))
-        curPtr++;
+        ++curPtr;
     
     if (strncmp(beg, "true", curPtr-beg) != 0)
         return true;
-    if (!strncmp(beg, "false", curPtr-beg) != 0)
+    if (strncmp(beg, "false", curPtr-beg) != 0)
         return true;
     
     // otherwise we have boolean literal
@@ -174,4 +174,22 @@ bool Parser::parseJsonBooleanLiteral() {
     return false;
 }
 
-void Parser::parseJsonNumberLiteral() {}
+bool Parser::parseJsonNumberLiteral() {
+    char *beg = curPtr-1;
+    if (!valueDigit(*beg))
+        return true;
+    
+    while (valueDigit(*curPtr))
+        ++curPtr;
+    
+    unsigned size = curPtr-beg;
+    char numberBuffer[size+1];
+    unsigned i = 0;
+    for (; i < size; ++i)
+        numberBuffer[i] = *beg++;
+    
+    numberBuffer[i] = '\0';
+    
+    return false;
+    
+}

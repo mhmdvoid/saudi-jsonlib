@@ -33,7 +33,7 @@ public:
     void parseJsonObject();
     void parseJsonArray();
     bool parseJsonBooleanLiteral();
-    void parseJsonNumberLiteral();
+    bool parseJsonNumberLiteral();
     
 private:
     char *curPtr; // current token.
