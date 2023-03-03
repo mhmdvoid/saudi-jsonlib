@@ -14,12 +14,12 @@ using namespace saudi_json;
 
 namespace {
 
-// move the global ptr if == token;
-
 void skipWhitespace(char *&pointer) {
     while (*pointer == ' ' || *pointer == '\t')
         ++pointer;
 }
+
+// move the global ptr if == token;
 bool skip(char *&pointer, char token) {
     skipWhitespace(pointer);
     auto mv = pointer;
@@ -63,7 +63,6 @@ bool lexIdentifier(char *beg, char *&ptr, char *keyContainer) {
     
 
     unsigned len = ptr-beg;
-    // key is ptr to 256 bytes container on stack;
     for (unsigned i = 0; i != len; ++i)
         keyContainer[i] = *beg++;
     len++;
@@ -76,12 +75,12 @@ bool valueDigit(char c) {
            c == '4' || c == '5' || c == '6' || c == '7' ||
            c == '8' || c == '9';
 }
-}
+
+} // end anonymous namesapce
 bool Parser::parseJsonDecl() {
-    // lexer method should be clearly on call;
+    
     if (skip(curPtr, '{')) {
-        // We could pass in instead of returing
-        // optim, if key filled json correct.
+        
         do {
             char *start = curPtr;
             char keyContainer[256]; // TODO: Move to identifier object.
@@ -104,9 +103,8 @@ bool Parser::parseJsonDecl() {
 }
 
 bool Parser::parseJsonString(char *keyContainer) {
-    if (!skip(curPtr, '\"')) {
+    if (!skip(curPtr, '\"'))
         return true; // json key start "
-    }
     
     char *beg = curPtr;
     
@@ -121,7 +119,7 @@ bool Parser::parseJsonValue() {
     char *beg = curPtr;
     switch (*curPtr++) {
         case '\"':
-            parseJsonString(nullptr);  //
+            parseJsonString(nullptr);  // FIXME: _
             break;
         case '{':
             parseJsonObject();
@@ -148,23 +146,19 @@ bool Parser::parseJsonValue() {
             break;
     }
     
-
     return true;
-    
-    
 }
-
 void Parser::parseJsonString()  {}
 void Parser::parseJsonObject()  {}
 void Parser::parseJsonArray()   {}
 bool Parser::parseJsonBooleanLiteral() {
     char* beg = curPtr-1;
-    if (!validJsonKey(*beg)) {
+    if (!validJsonKey(*beg))
         return true;
-    }
     
     while (validJsonKey(*curPtr))
         curPtr++;
+    
     if (strncmp(beg, "true", curPtr-beg) != 0)
         return true;
     if (!strncmp(beg, "false", curPtr-beg) != 0)
@@ -173,9 +167,6 @@ bool Parser::parseJsonBooleanLiteral() {
     // otherwise we have boolean literal
     
     return false;
-
-    
-    // parse like an identifer, then compare if its true, or false valid bool literal, otherwise invalid literal, and red flag.
-    
 }
+
 void Parser::parseJsonNumberLiteral() {}
