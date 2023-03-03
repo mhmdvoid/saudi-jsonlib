@@ -32,7 +32,7 @@ public:
     void parseJsonString();
     void parseJsonObject();
     void parseJsonArray();
-    void parseJsonBooleanLiteral();
+    bool parseJsonBooleanLiteral();
     void parseJsonNumberLiteral();
     
 private:

@@ -7,7 +7,7 @@
 
 
 #include "Parser.h"
-
+#include <string>
 using namespace saudi_json;
 
 #define MAX_KEY 8192 // 8 K
@@ -15,10 +15,13 @@ using namespace saudi_json;
 namespace {
 
 // move the global ptr if == token;
-bool skip(char *&pointer, char token) {
-    
+
+void skipWhitespace(char *&pointer) {
     while (*pointer == ' ' || *pointer == '\t')
         ++pointer;
+}
+bool skip(char *&pointer, char token) {
+    skipWhitespace(pointer);
     auto mv = pointer;
     if (*mv == token) {
         ++pointer;
@@ -27,6 +30,8 @@ bool skip(char *&pointer, char token) {
     return false;
     
 }
+
+
 bool validJsonKey(const char c) {
     switch (c) {
         case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -112,7 +117,7 @@ bool Parser::parseJsonString(char *keyContainer) {
 }
 
 bool Parser::parseJsonValue() {
-    
+    skipWhitespace(curPtr);
     char *beg = curPtr;
     switch (*curPtr++) {
         case '\"':
@@ -152,7 +157,23 @@ bool Parser::parseJsonValue() {
 void Parser::parseJsonString()  {}
 void Parser::parseJsonObject()  {}
 void Parser::parseJsonArray()   {}
-void Parser::parseJsonBooleanLiteral() {
+bool Parser::parseJsonBooleanLiteral() {
+    char* beg = curPtr-1;
+    if (!validJsonKey(*beg)) {
+        return true;
+    }
+    
+    while (validJsonKey(*curPtr))
+        curPtr++;
+    if (strncmp(beg, "true", curPtr-beg) != 0)
+        return true;
+    if (!strncmp(beg, "false", curPtr-beg) != 0)
+        return true;
+    
+    // otherwise we have boolean literal
+    
+    return false;
+
     
     // parse like an identifer, then compare if its true, or false valid bool literal, otherwise invalid literal, and red flag.
     
