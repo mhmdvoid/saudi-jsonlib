@@ -7,7 +7,7 @@
 
 #ifndef Parser_h
 #define Parser_h
-
+#include "Node.h"
 namespace saudi_json {
 class Parser {
     
@@ -32,8 +32,8 @@ public:
     void parseJsonString();
     void parseJsonObject();
     void parseJsonArray();
-    bool parseJsonBooleanLiteral();
-    bool parseJsonNumberLiteral();
+    JsonBooleanNode *parseJsonBooleanLiteral();
+    JsonNumberNode *parseJsonNumberLiteral();
     
 private:
     char *curPtr; // current token.

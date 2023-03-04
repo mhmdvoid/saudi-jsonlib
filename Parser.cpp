@@ -7,10 +7,13 @@
 
 
 #include "Parser.h"
+
 #include <string>
 using namespace saudi_json;
 
 #define MAX_KEY 8192 // 8 K
+#define DEFAULT_STRING_VALUE MAX_KEY
+#define MAX_STRING_VALUE 5368709121  // 5 GB
 
 namespace {
 
@@ -123,6 +126,8 @@ bool Parser::parseJsonValue() {
     skipWhitespace(curPtr);
     char *beg = curPtr;
     switch (*curPtr++) {
+        default:
+            break;
         case '\"':
             parseJsonString(nullptr);  // FIXME: _
             break;
@@ -134,21 +139,22 @@ bool Parser::parseJsonValue() {
             parseJsonArray();
             break;
         case '0': case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7': case '8': case '9':
+        case '5': case '6': case '7': case '8': case '9': {
             // number value
-            parseJsonNumberLiteral();
-            break;
-        case 't':
-            // possible true literal
-            parseJsonBooleanLiteral();
-            break;
-        case 'f':
-            // possible false literal
-            parseJsonBooleanLiteral();
-            break;
+            JsonNumberNode *numberNode = 0;
             
-        default:
+            numberNode = parseJsonNumberLiteral();
             break;
+        }
+        case 't': case 'f': // possible true/false literal
+            JsonBooleanNode *booleanNode = 0;
+            booleanNode = parseJsonBooleanLiteral();
+//            if (booleanNode == 0) {
+//                // failed, and that's null.
+//            }
+                
+            break;
+         
     }
     
     return false;
@@ -156,40 +162,50 @@ bool Parser::parseJsonValue() {
 void Parser::parseJsonString()  {}
 void Parser::parseJsonObject()  {}
 void Parser::parseJsonArray()   {}
-bool Parser::parseJsonBooleanLiteral() {
+
+// null is retunred if fail to parse json literal.
+JsonBooleanNode *Parser::parseJsonBooleanLiteral() {
     char* beg = curPtr-1;
     if (!validJsonKey(*beg))
-        return true;
+        return 0;
     
     while (validJsonKey(*curPtr))
         ++curPtr;
     
-    if (strncmp(beg, "true", curPtr-beg) != 0)
-        return true;
-    if (strncmp(beg, "false", curPtr-beg) != 0)
-        return true;
+    JsonBooleanNode *binResult = 0;
+    if (strncmp(beg, "true", curPtr-beg) == 0) {
+        binResult = new JsonBooleanNode("true");
+        binResult->setValue(true);
+    }
+    if (strncmp(beg, "false", curPtr-beg) == 0) {
+        binResult = new JsonBooleanNode("false");
+        binResult->setValue(false);
+    }
     
-    // otherwise we have boolean literal
-    
-    return false;
+    return binResult;
 }
 
-bool Parser::parseJsonNumberLiteral() {
+JsonNumberNode *Parser::parseJsonNumberLiteral() {
     char *beg = curPtr-1;
     if (!valueDigit(*beg))
-        return true;
+        return 0;
     
     while (valueDigit(*curPtr))
         ++curPtr;
     
-    unsigned size = curPtr-beg;
-    char numberBuffer[size+1];
+    JsonNumberNode *numberResult = 0;
+    unsigned long size = curPtr-beg;
+    
+    char numberBuffer[size+1]; // Data structure can't be copied auto for you.
     unsigned i = 0;
     for (; i < size; ++i)
         numberBuffer[i] = *beg++;
     
     numberBuffer[i] = '\0';
     
-    return false;
+    numberResult = new JsonNumberNode(numberBuffer, size);
+    
+    
+    return numberResult;
     
 }
