@@ -8,7 +8,11 @@
 #ifndef Node_h
 #define Node_h
 #include <string>
+#include <vector>
+#include <iostream>
 namespace saudi_json {
+class JsonNode;
+class JsonBooleanNode;
 
 class Location {
     unsigned line, col;
@@ -21,14 +25,44 @@ public:
     
 };
 
-class Root {
-    Root(const Root&);
-    void operator=(const Root&);
+class JsonEntry {
+    
 public:
-    Root() {}
+    JsonEntry(char *buffer) {
+        memcpy(key, buffer, 256);
+    }
+    char key[256];
+    JsonNode *value;
+    
 };
 
-class JsonNumberNode: public Root {
+class JsonRoot {
+public:
+    std::vector<JsonEntry *> entries;
+    
+    
+  
+    void printAll() const {
+        for (auto & entry : entries) {
+            std::cout << entry->key << std::endl;
+//            if (JsonBooleanNode* v = dynamic_cast<JsonBooleanNode*>(entry->value)) {
+//
+//            }
+        }
+    }
+    
+};
+
+class JsonNode {
+    JsonNode(const JsonNode&);
+    void operator=(const JsonNode&);
+public:
+    JsonNode() {}
+};
+
+
+
+class JsonNumberNode: public JsonNode {
     
 public:
     explicit JsonNumberNode(char *buff, unsigned long s/*, Location &location*/) /*, loc(location)*/ {
@@ -44,7 +78,7 @@ private:
 //    Location &loc;
 };
 
-class JsonBooleanNode: public Root {
+class JsonBooleanNode: public JsonNode {
     
     
 public:

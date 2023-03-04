@@ -27,7 +27,7 @@ public:
     
     // handlers.
     bool parseJsonString(char *keyIdnetifier);
-    bool parseJsonValue();
+    JsonNode *parseJsonValue();
     
     void parseJsonString();
     void parseJsonObject();

@@ -81,7 +81,9 @@ bool valueDigit(char c) {
 
 } // end anonymous namesapce
 bool Parser::parseJsonDecl() {
-    
+    // Attrs is an entry; key_value;
+    JsonRoot *root = new JsonRoot();  // Even if the json is empty.
+
     if (skip(curPtr, '{')) {
         
         do {
@@ -92,14 +94,21 @@ bool Parser::parseJsonDecl() {
             
             
             if (parseJsonString(keyContainer) && !skip(curPtr, ':')) {
+                // FIXME: Memory leak.
                 return true; // FIXME: this propegates the erorr, failur
             }
+            JsonEntry* entry = new JsonEntry(keyContainer);
+            
+            
+            JsonNode *node = parseJsonValue();
             
             // call parse_object if no object starter found, then immediely exit. and tell where we stop
-            if (parseJsonValue()) {
+            if (node == 0) {
+                // FIXME: Memory leak.
                 return true;
             }
-            
+            entry->value = node;
+            root->entries.push_back(entry);
         } while(skip(curPtr, ','));
     }
     
@@ -107,6 +116,7 @@ bool Parser::parseJsonDecl() {
         return true;
     }
     assert(*curPtr == '\0' && "json ends!");
+    root->printAll();
     return false;
 }
 
@@ -122,9 +132,10 @@ bool Parser::parseJsonString(char *keyContainer) {
     return true;
 }
 
-bool Parser::parseJsonValue() {
+JsonNode *Parser::parseJsonValue() {
     skipWhitespace(curPtr);
     char *beg = curPtr;
+    JsonNode *nodeValue = 0;
     switch (*curPtr++) {
         default:
             break;
@@ -139,25 +150,22 @@ bool Parser::parseJsonValue() {
             parseJsonArray();
             break;
         case '0': case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7': case '8': case '9': {
+        case '5': case '6': case '7': case '8': case '9':
             // number value
-            JsonNumberNode *numberNode = 0;
             
-            numberNode = parseJsonNumberLiteral();
+            
+            nodeValue = parseJsonNumberLiteral();
+            // if node value is null, then error parsin;
             break;
-        }
+        
         case 't': case 'f': // possible true/false literal
-            JsonBooleanNode *booleanNode = 0;
-            booleanNode = parseJsonBooleanLiteral();
-//            if (booleanNode == 0) {
-//                // failed, and that's null.
-//            }
-                
+            
+            nodeValue = parseJsonBooleanLiteral();
             break;
          
     }
     
-    return false;
+    return nodeValue;
 }
 void Parser::parseJsonString()  {}
 void Parser::parseJsonObject()  {}
