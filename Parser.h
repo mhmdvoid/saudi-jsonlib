@@ -29,7 +29,7 @@ public:
     bool parseJsonString(char *keyIdnetifier);
     JsonNode *parseJsonValue();
     
-    void parseJsonString();
+    JsonStringNode *parseJsonStringValue();
     void parseJsonObject();
     void parseJsonArray();
     JsonBooleanNode *parseJsonBooleanLiteral();

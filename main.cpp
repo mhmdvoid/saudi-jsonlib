@@ -9,7 +9,8 @@
 #include "Parser.h"
 int main(int argc, const char * argv[]) {
     
-    saudi_json::Parser parser {"{ \"foo\": true, \"valid\": false, \"employees\": 2343}"};
+    
+    saudi_json::Parser parser {"{ \"foo\": \"true\"}"};
     if (parser.parseJsonDecl())
         std::cout << "Error found\n";
     return 0;

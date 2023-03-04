@@ -14,7 +14,15 @@ using namespace saudi_json;
 #define MAX_KEY 8192 // 8 K
 #define DEFAULT_STRING_VALUE MAX_KEY
 #define MAX_STRING_VALUE 5368709121  // 5 GB
-
+/*
+ 
+ foo: {
+    fsdf: "SDF,
+    fo: {
+ 
+ }
+ }
+ */
 namespace {
 
 void skipWhitespace(char *&pointer) {
@@ -140,7 +148,7 @@ JsonNode *Parser::parseJsonValue() {
         default:
             break;
         case '\"':
-            parseJsonString(nullptr);  // FIXME: _
+            parseJsonStringValue();  // FIXME: _
             break;
         case '{':
             parseJsonObject();
@@ -167,7 +175,30 @@ JsonNode *Parser::parseJsonValue() {
     
     return nodeValue;
 }
-void Parser::parseJsonString()  {}
+JsonStringNode *Parser::parseJsonStringValue()  {
+
+    char *beg = curPtr-1;
+    if (!skip(beg, '\"'))
+        return 0;
+    
+    while (validJsonKey(*curPtr))
+        ++curPtr;
+    
+    assert(*curPtr == '\"' && "doesn't escape \" char!");
+    // FIXME: if size > default: allocate dyn 5 GB!
+    char stringValue[DEFAULT_STRING_VALUE]; // 8k on stack.
+    unsigned long valueSize = curPtr++ - beg;
+    unsigned i = 0;
+    while (i != valueSize) {
+        stringValue[i] = *beg++;
+        ++i;
+    }
+    stringValue[i] = '\0';
+    
+    JsonStringNode *node = new JsonStringNode(stringValue, valueSize);
+    return node;
+    
+}
 void Parser::parseJsonObject()  {}
 void Parser::parseJsonArray()   {}
 

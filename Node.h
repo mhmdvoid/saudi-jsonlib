@@ -11,6 +11,7 @@
 #include <vector>
 #include <iostream>
 namespace saudi_json {
+class JsonPrimitiveNode;
 class JsonNode;
 class JsonBooleanNode;
 
@@ -60,9 +61,26 @@ public:
     JsonNode() {}
 };
 
+class JsonPrimitiveNode: public JsonNode {
+    
+public:
+    JsonPrimitiveNode(){}
+    JsonPrimitiveNode(char *v): value(v) {}
+    char *value;
+
+};
 
 
-class JsonNumberNode: public JsonNode {
+class JsonStringNode: public JsonPrimitiveNode {
+public:
+    JsonStringNode(char *buff, unsigned long s) {  // TODO: Move this code to a dyn_string allocator.
+        value = new char[s+1];
+        memcpy(value, buff, s+1);
+    }
+    
+};
+
+class JsonNumberNode: public JsonPrimitiveNode {
     
 public:
     explicit JsonNumberNode(char *buff, unsigned long s/*, Location &location*/) /*, loc(location)*/ {
@@ -73,24 +91,24 @@ public:
     }
 
 private:
-    char *value; // could be static allocated. pre-defined value for max_number_range.
+//    char *value; // could be static allocated. pre-defined value for max_number_range.
     bool isNegative;
 //    Location &loc;
 };
 
-class JsonBooleanNode: public JsonNode {
+class JsonBooleanNode: public JsonPrimitiveNode {
     
     
 public:
     
-    JsonBooleanNode(char *v/*, Location &location*/): value(v)/*, loc(location)*/ {}
+    JsonBooleanNode(char *v/*, Location &location*/): JsonPrimitiveNode(v)/*, loc(location)*/ {}
     void setValue(bool b) {
         is_true = b;
     }
     bool isTrue() const { return is_true; }
     bool isFalse() const { return !is_true; }
 private:
-    char *value;
+
     /*Location &loc;*/
     bool is_true;
 };
