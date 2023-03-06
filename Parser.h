@@ -17,7 +17,7 @@ class Parser {
 public:
     typedef unsigned long Line;
     typedef unsigned long Column;
-    explicit Parser(char *src): curPtr(src) {};
+    explicit Parser(char *src): curPtr(src), beg(src), line(0), col(0) {}
     
     
     
@@ -37,6 +37,7 @@ public:
     
 private:
     char *curPtr; // current token.
+    char *beg;// TODO: FILE BUFFER
     Line line;
     Column col;
 };

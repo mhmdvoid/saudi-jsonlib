@@ -26,7 +26,7 @@ using namespace saudi_json;
 namespace {
 
 void skipWhitespace(char *&pointer) {
-    while (*pointer == ' ' || *pointer == '\t')
+    while (*pointer == ' ' || *pointer == '\t' || *pointer == '\n')
         ++pointer;
 }
 
@@ -227,8 +227,7 @@ JsonNode *Parser::parseJsonArray()   {
     do {
         switch (*curPtr++) {
             default:
-                std::cout << *curPtr << '\n';
-//                goto error;
+                goto error;
                 break;
 //
             case '\"': // string value;
@@ -248,7 +247,11 @@ JsonNode *Parser::parseJsonArray()   {
     
     
     
-    if (!skip(curPtr, ']')) { goto error; }
+    if (!skip(curPtr, ']')) {
+        auto size = curPtr-this->beg;
+        std::cout << "column location of unexpected token " << *curPtr << " is at= " << size << std::endl;
+        goto error;
+    }
     error:
         return 0;
     

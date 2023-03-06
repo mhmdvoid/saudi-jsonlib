@@ -8,9 +8,14 @@
 #include <iostream>
 #include "Parser.h"
 int main(int argc, const char * argv[]) {
-    
-    
-    saudi_json::Parser parser {"[\"foo\": true]"};
+    /*
+     
+     */
+    char* json = "[\n"
+                        "\"foo\": true\n"
+    "]";
+                        
+    saudi_json::Parser parser {json};
     if (parser.parseJsonDecl())
         std::cout << "Error found\n";
     return 0;
