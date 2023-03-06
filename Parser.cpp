@@ -89,11 +89,19 @@ bool valueDigit(char c) {
 
 } // end anonymous namesapce
 bool Parser::parseJsonDecl() {
-    // Attrs is an entry; key_value;
-    JsonRoot *root = new JsonRoot();  // Even if the json is empty.
-
-    if (skip(curPtr, '{')) {
-        
+    
+    
+    
+    JsonObjectValue *root = new JsonObjectValue();  // default is {} root object
+    bool isArray = false;
+    char *slice = curPtr;
+    if (skip(curPtr, '{') || skip(curPtr, '[')) {
+        if (*slice == '[') {
+            JsonArrayValue *arrayRoot = new JsonArrayValue();
+            isArray = true;
+            arrayRoot->insertNode(parseJsonArray()); // Root.
+            goto endTopLevelDecl;
+        }
         do {
             char *start = curPtr;
             char keyContainer[256]; // TODO: Move to identifier object.
@@ -119,9 +127,15 @@ bool Parser::parseJsonDecl() {
             root->entries.push_back(entry);
         } while(skip(curPtr, ','));
     }
-    
-    if (!skip(curPtr, '}')) {
-        return true;
+    endTopLevelDecl:
+    if (isArray) { // FIXME: move to union pointer.
+        if (!skip(curPtr, ']')) {
+            return true;
+        }
+    } else {
+        if (!skip(curPtr, '}')) {
+            return true;
+        }
     }
     assert(*curPtr == '\0' && "json ends!");
     root->printAll();
@@ -148,7 +162,7 @@ JsonNode *Parser::parseJsonValue() {
         default:
             break;
         case '\"':
-            parseJsonStringValue();  // FIXME: _
+            nodeValue = parseJsonStringValue();  // FIXME: _
             break;
         case '{':
             parseJsonObject();
@@ -200,7 +214,45 @@ JsonStringNode *Parser::parseJsonStringValue()  {
     
 }
 void Parser::parseJsonObject()  {}
-void Parser::parseJsonArray()   {}
+JsonNode *Parser::parseJsonArray()   {
+    
+    char *beg = curPtr-1;
+    assert(*beg == '[' && "Json array doesn't start [ !!");
+    // Json Array has only value state, i.e string, numbers, true/false, jsonObject.
+    
+    
+    JsonNode *node = 0;
+//    Expecting 'STRING', 'NUMBER', 'NULL', 'TRUE', 'FALSE', '{', '[', ']'
+    do {
+        switch (*curPtr++) {
+            default:
+                std::cout << *curPtr << '\n';
+//                goto error;
+                break;
+//
+            case '\"': // string value;
+                node = parseJsonStringValue();
+                break;
+            case 't': case 'f':
+                node = parseJsonBooleanLiteral();
+                break; // Bool value;
+            case '{':
+                break; // Json object;
+            case '[':
+                // what if recursion happens? store the prev node
+                break; // Nested array;
+               
+        }
+    } while(skip(curPtr, ','));
+    
+    
+    
+    if (!skip(curPtr, ']')) { goto error; }
+    error:
+        return 0;
+    
+    return node;
+}
 
 // null is retunred if fail to parse json literal.
 JsonBooleanNode *Parser::parseJsonBooleanLiteral() {

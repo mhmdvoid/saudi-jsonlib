@@ -26,18 +26,28 @@ public:
     
 };
 
+
+class JsonNode {
+    JsonNode(const JsonNode&);
+    void operator=(const JsonNode&);
+public:
+    JsonNode() {}
+};
+
 class JsonEntry {
     
 public:
     JsonEntry(char *buffer) {
         memcpy(key, buffer, 256);
     }
-    char key[256];
+    char key[256]; // if key is null then it's an array.
     JsonNode *value;
     
 };
 
-class JsonRoot {
+class JsonObjectValue: public JsonNode {
+    
+    bool isRoot;
 public:
     std::vector<JsonEntry *> entries;
     
@@ -51,16 +61,16 @@ public:
 //            }
         }
     }
-    
 };
-
-class JsonNode {
-    JsonNode(const JsonNode&);
-    void operator=(const JsonNode&);
+class JsonArrayValue: public JsonNode {
+    bool isRoot;
+    std::vector<JsonNode *> values;
 public:
-    JsonNode() {}
+    JsonArrayValue() {}
+    void insertNode(JsonNode *value) {
+        values.push_back(value);
+    }
 };
-
 class JsonPrimitiveNode: public JsonNode {
     
 public:
