@@ -217,6 +217,7 @@ void Parser::parseJsonObject()  {}
 JsonNode *Parser::parseJsonArray()   {
     
     char *beg = curPtr-1;
+    skipWhitespace(curPtr);
     assert(*beg == '[' && "Json array doesn't start [ !!");
     // Json Array has only value state, i.e string, numbers, true/false, jsonObject.
     
