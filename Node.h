@@ -39,25 +39,49 @@ public:
     JsonNode() {}
 };
 
-class JsonEntry {
+class BasicEntry {
+public:
+    JsonNode *value;
+//    bool hasChild {};
+//    JsonNode *nxt;
+//    int len;
+};
+
+
+class ArrayEntry: public BasicEntry {
+    // doesn't have a key.
+    // just a value.
+};
+class JsonObjectEntry: public BasicEntry {
     
 public:
-    JsonEntry(char *buffer) {
+    JsonObjectEntry(char *buffer) {
         memcpy(key, buffer, 256);
     }
     char key[256]; // if key is null then it's an array.
-    JsonNode *value;
+    
     
 };
 
-class JsonObjectValue: public JsonNode {
+
+class JsonRoot {
+    
+public:
+    JsonRoot() {};
+    virtual bool insertEntry(BasicEntry *entry) {return false;}
+};
+class JsonObjectValue: public JsonNode, public JsonRoot {
     
     bool isRoot;
 public:
-    std::vector<JsonEntry *> entries;
+    std::vector<JsonObjectEntry *> entries;
     
-    
-  
+
+    bool insertEntry(BasicEntry *entry) {
+        auto e = (JsonObjectEntry *) entry;
+        entries.push_back(e);
+        return true;
+    }
     void printAll() const {
         for (auto & entry : entries) {
             std::cout << entry->key << std::endl;
@@ -67,36 +91,45 @@ public:
         }
     }
 };
-class JsonArrayValue: public JsonNode {
+class JsonArrayValue: public JsonNode, public JsonRoot  {
     bool isRoot;
     std::vector<JsonNode *> values;
 public:
     JsonArrayValue() {}
+    bool insertEntry(BasicEntry *entry) {
+        auto v = entry->value;
+        values.push_back(v);
+        return true;
+    }
+
     void insertNode(JsonNode *value) {
         values.push_back(value);
     }
 };
 
+// Holder;
 class Root {
     
     Root(const Root&);
     void operator=(const Root&);
     
-    // if the root is object. then keep track of key_value
-    // this is abstraction as i don't know weather i will receive runtime json [, {
-    // Root jsonObject no not at all this is is to keep track of things? right?
-    // in other word.
-    // JsonObje value = "[
-    // JsonObj  value = "{}";
-    // value.isArray = false;
-    // class Root is internal data structure, that no one should use.
-    // JsonObject
 private:
     Root()= default;
     ~Root()= default;
 public:
-    JsonObjectValue *object_root;
-    JsonArrayValue *array_root;
+    
+    enum class rootType {
+        array,
+        object
+    };
+    
+    JsonRoot *root;  // base class -will be a pointer to a heap value object.
+    // either a
+    //  root should have an interface.
+    // jsonEntery;  basic
+    // object entey;
+    // arrayEntry;
+    // root.insert(jsonEntry);
     static Root& getInstance() {
         static Root instance;
         return instance;

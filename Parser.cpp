@@ -90,18 +90,21 @@ bool valueDigit(char c) {
 } // end anonymous namesapce
 bool Parser::parseJsonDecl() {
     
-    
-    
-    Root &global_root = Root::getInstance();
-    global_root.object_root = new JsonObjectValue();  // default is {} root object
+    JsonRoot *root = 0;
     bool isArray = false;
     char *slice = curPtr;
     if (skip(curPtr, '{') || skip(curPtr, '[')) {
         if (*slice == '[') {
-            global_root.array_root = new JsonArrayValue(); // null otherwise
+            // now we
+            root = new JsonArrayValue(); // null otherwise
             isArray = true;
-            global_root.array_root->insertNode(parseJsonArray()); // TODO: Root should be singleton
-            goto endTopLevelDecl;
+            do {
+                
+                
+                auto value = parseJsonArray();
+                root->insertEntry(value);
+                
+            } while (skip(curPtr, ','));
         }
         do {
             char *start = curPtr;
@@ -114,7 +117,7 @@ bool Parser::parseJsonDecl() {
                 // FIXME: Memory leak.
                 return true; // FIXME: this propegates the erorr, failur
             }
-            JsonEntry* entry = new JsonEntry(keyContainer);
+            JsonObjectEntry* entry = new JsonObjectEntry(keyContainer);
             
             
             JsonNode *node = parseJsonValue();
@@ -125,7 +128,7 @@ bool Parser::parseJsonDecl() {
                 return true;
             }
             entry->value = node;
-            global_root.object_root->entries.push_back(entry);
+//            global_root.object_root->entries.push_back(entry);
         } while(skip(curPtr, ','));
     }
     endTopLevelDecl:
@@ -139,7 +142,7 @@ bool Parser::parseJsonDecl() {
         }
     }
     assert(*curPtr == '\0' && "json ends!");
-    global_root.object_root->printAll();
+//    global_root.object_root->printAll();
     return false;
 }
 
@@ -216,31 +219,39 @@ JsonStringNode *Parser::parseJsonStringValue()  {
     
 }
 void Parser::parseJsonObject()  {}
-JsonNode *Parser::parseJsonArray()   {
+BasicEntry *Parser::parseJsonArray()   {
     
     char *beg = curPtr-1;
     skipWhitespace(curPtr);
-    assert(*beg == '[' && "Json array doesn't start [ !!");
+//    assert(*beg == '[' && "Json array doesn't start [ !!");
     // Json Array has only value state, i.e string, numbers, true/false, jsonObject.
     
     
-    JsonNode *node = 0;
+    BasicEntry *entrySlot = new BasicEntry(); // FIXME
 //    Expecting 'STRING', 'NUMBER', 'NULL', 'TRUE', 'FALSE', '{', '[', ']'
-    do {
-        skipWhitespace(curPtr);
+//    do {
+    
+    
+    // go to start!;
+        skipWhitespace(curPtr); // Go start and
         switch (*curPtr++) {
             default:
-                goto error;
+//                goto error;
                 break;
 //
             case '\"': // string value;
-                node = parseJsonStringValue();
-                Root::getInstance().array_root->insertNode(node);
-                break;
+                entrySlot->value = parseJsonStringValue();
+
+                return entrySlot;
+//                break;
             case 't': case 'f':
-                node = parseJsonBooleanLiteral();
-                Root::getInstance().array_root->insertNode(node);
-                break; // Bool value;
+                
+                entrySlot->value = parseJsonBooleanLiteral();
+                return entrySlot;
+
+//                return node;
+//                Root::getInstance().array_root->insertNode(node);
+//                break; // Bool value;
             case '{':
                 break; // Json object;
             case '[':
@@ -249,19 +260,17 @@ JsonNode *Parser::parseJsonArray()   {
                 break; // Nested array;
                
         }
-    } while(skip(curPtr, ','));
+//    } //while(skip(curPtr, ','));
     
     
     
-    if (!skip(curPtr, ']')) {
-        auto size = curPtr-this->beg;
-        std::cout << "column location of unexpected token " << *curPtr << " is at= " << size << std::endl;
-        goto error;
-    }
-    error:
-        return 0;
+//    if (!skip(curPtr, ']')) {
+//        auto size = curPtr-this->beg;
+//        std::cout << "column location of unexpected token " << *curPtr << " is at= " << size << std::endl;
+////        goto error;
+//    }
     
-    return node;
+    return entrySlot;
 }
 
 // null is retunred if fail to parse json literal.
