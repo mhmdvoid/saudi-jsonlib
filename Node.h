@@ -26,6 +26,11 @@ public:
     
 };
 
+// Shared root. which Root.getinstance.jsonArray.insert();
+// We need this when constructing the root only;
+// []
+
+// but now the jsonArray is really
 
 class JsonNode {
     JsonNode(const JsonNode&);
@@ -71,6 +76,34 @@ public:
         values.push_back(value);
     }
 };
+
+class Root {
+    
+    Root(const Root&);
+    void operator=(const Root&);
+    
+    // if the root is object. then keep track of key_value
+    // this is abstraction as i don't know weather i will receive runtime json [, {
+    // Root jsonObject no not at all this is is to keep track of things? right?
+    // in other word.
+    // JsonObje value = "[
+    // JsonObj  value = "{}";
+    // value.isArray = false;
+    // class Root is internal data structure, that no one should use.
+    // JsonObject
+private:
+    Root()= default;
+    ~Root()= default;
+public:
+    JsonObjectValue *object_root;
+    JsonArrayValue *array_root;
+    static Root& getInstance() {
+        static Root instance;
+        return instance;
+    }
+};
+
+
 class JsonPrimitiveNode: public JsonNode {
     
 public:

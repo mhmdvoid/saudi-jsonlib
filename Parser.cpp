@@ -92,14 +92,15 @@ bool Parser::parseJsonDecl() {
     
     
     
-    JsonObjectValue *root = new JsonObjectValue();  // default is {} root object
+    Root &global_root = Root::getInstance();
+    global_root.object_root = new JsonObjectValue();  // default is {} root object
     bool isArray = false;
     char *slice = curPtr;
     if (skip(curPtr, '{') || skip(curPtr, '[')) {
         if (*slice == '[') {
-            JsonArrayValue *arrayRoot = new JsonArrayValue();
+            global_root.array_root = new JsonArrayValue(); // null otherwise
             isArray = true;
-            arrayRoot->insertNode(parseJsonArray()); // Root.
+            global_root.array_root->insertNode(parseJsonArray()); // TODO: Root should be singleton
             goto endTopLevelDecl;
         }
         do {
@@ -124,7 +125,7 @@ bool Parser::parseJsonDecl() {
                 return true;
             }
             entry->value = node;
-            root->entries.push_back(entry);
+            global_root.object_root->entries.push_back(entry);
         } while(skip(curPtr, ','));
     }
     endTopLevelDecl:
@@ -138,7 +139,7 @@ bool Parser::parseJsonDecl() {
         }
     }
     assert(*curPtr == '\0' && "json ends!");
-    root->printAll();
+    global_root.object_root->printAll();
     return false;
 }
 
@@ -191,6 +192,7 @@ JsonNode *Parser::parseJsonValue() {
 }
 JsonStringNode *Parser::parseJsonStringValue()  {
 
+
     char *beg = curPtr-1;
     if (!skip(beg, '\"'))
         return 0;
@@ -225,6 +227,7 @@ JsonNode *Parser::parseJsonArray()   {
     JsonNode *node = 0;
 //    Expecting 'STRING', 'NUMBER', 'NULL', 'TRUE', 'FALSE', '{', '[', ']'
     do {
+        skipWhitespace(curPtr);
         switch (*curPtr++) {
             default:
                 goto error;
@@ -232,14 +235,17 @@ JsonNode *Parser::parseJsonArray()   {
 //
             case '\"': // string value;
                 node = parseJsonStringValue();
+                Root::getInstance().array_root->insertNode(node);
                 break;
             case 't': case 'f':
                 node = parseJsonBooleanLiteral();
+                Root::getInstance().array_root->insertNode(node);
                 break; // Bool value;
             case '{':
                 break; // Json object;
             case '[':
                 // what if recursion happens? store the prev node
+                return parseJsonArray();
                 break; // Nested array;
                
         }
