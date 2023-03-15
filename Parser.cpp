@@ -30,6 +30,14 @@ void skipWhitespace(char *&pointer) {
         ++pointer;
 }
 
+bool match(char *&ptr, char token) {
+    skipWhitespace(ptr);
+    if (*ptr == token) {
+        return true;
+    }
+    return false;
+    
+}
 // move the global ptr if == token;
 bool skip(char *&pointer, char token) {
     skipWhitespace(pointer);
@@ -88,6 +96,10 @@ bool valueDigit(char c) {
 }
 
 } // end anonymous namesapce
+
+
+
+
 bool Parser::parseJsonDecl() {
     
     JsonRoot *root = 0;
@@ -101,10 +113,11 @@ bool Parser::parseJsonDecl() {
             do {
                 
                 
-                auto value = parseJsonArray();
+                auto value = parseJsonArray((JsonArrayValue*)root);
                 root->insertEntry(value);
                 
             } while (skip(curPtr, ','));
+            goto clean;;
         }
         do {
             char *start = curPtr;
@@ -131,17 +144,20 @@ bool Parser::parseJsonDecl() {
 //            global_root.object_root->entries.push_back(entry);
         } while(skip(curPtr, ','));
     }
-    endTopLevelDecl:
-    if (isArray) { // FIXME: move to union pointer.
-        if (!skip(curPtr, ']')) {
-            return true;
-        }
-    } else {
-        if (!skip(curPtr, '}')) {
-            return true;
-        }
-    }
-    assert(*curPtr == '\0' && "json ends!");
+    clean:
+    auto js = (JsonArrayValue*) root;
+    js->printAll();
+//    endTopLevelDecl:
+//    if (isArray) { // FIXME: move to union pointer.
+//        if (!skip(curPtr, ']')) {
+//            return true;
+//        }
+//    } else {
+//        if (!skip(curPtr, '}')) {
+//            return true;
+//        }
+//    }
+//    assert(*curPtr == '\0' && "json ends!");
 //    global_root.object_root->printAll();
     return false;
 }
@@ -173,7 +189,8 @@ JsonNode *Parser::parseJsonValue() {
             break;
         case '[':
             // array value
-            parseJsonArray();
+//            auto parent = new JsonArrayValue();
+            parseJsonArray(0);
             break;
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
@@ -218,22 +235,25 @@ JsonStringNode *Parser::parseJsonStringValue()  {
     return node;
     
 }
+
+static std::vector<JsonArrayValue*> stack;
 void Parser::parseJsonObject()  {}
-BasicEntry *Parser::parseJsonArray()   {
-    
-    char *beg = curPtr-1;
+BasicEntry *Parser::parseJsonArray(JsonArrayValue *parent)   {
+    // parseJsonArray: if no nested structire found, is on demand parsing method.
+    // one call one array basic_value
+    // if find nested structure we loop for every nested structure.
+    // this also true when we found a json_object {} which will be one call except that json is nested. which eventually we will be waiting.
     skipWhitespace(curPtr);
+    char *beg = curPtr-1;
+
 //    assert(*beg == '[' && "Json array doesn't start [ !!");
-    // Json Array has only value state, i.e string, numbers, true/false, jsonObject.
     
+    int Depth = 1;
+    // We're sure weather we're coming from a root_array or object_value.
     
-    BasicEntry *entrySlot = new BasicEntry(); // FIXME
+    BasicEntry *entrySlot = new BasicEntry(); // This is actually outter value. depth 1;
 //    Expecting 'STRING', 'NUMBER', 'NULL', 'TRUE', 'FALSE', '{', '[', ']'
-//    do {
-    
-    
-    // go to start!;
-        skipWhitespace(curPtr); // Go start and
+        skipWhitespace(curPtr);
         switch (*curPtr++) {
             default:
 //                goto error;
@@ -243,33 +263,47 @@ BasicEntry *Parser::parseJsonArray()   {
                 entrySlot->value = parseJsonStringValue();
 
                 return entrySlot;
-//                break;
             case 't': case 'f':
                 
                 entrySlot->value = parseJsonBooleanLiteral();
                 return entrySlot;
 
-//                return node;
-//                Root::getInstance().array_root->insertNode(node);
-//                break; // Bool value;
             case '{':
                 break; // Json object;
             case '[':
-                // what if recursion happens? store the prev node
-                return parseJsonArray();
-                break; // Nested array;
-               
+                
+                start:
+                stack.push_back(parent);
+                
+                auto current = new JsonArrayValue();
+                
+                parent->insertNode(current);
+//                current->prev = parent; // later.
+                
+                do {
+                    skipWhitespace(curPtr);
+                    switch (*curPtr++) {
+                        case 't': case 'f':
+                            current->insertNode(parseJsonBooleanLiteral());
+                            break;
+                        case '[':
+                            parent = current;
+                            goto start;
+                            
+                        default:
+                            break;
+                    }
+                } while(skip(curPtr, ','));
+                
+                break;
         }
-//    } //while(skip(curPtr, ','));
     
     
-    
-//    if (!skip(curPtr, ']')) {
-//        auto size = curPtr-this->beg;
-//        std::cout << "column location of unexpected token " << *curPtr << " is at= " << size << std::endl;
-////        goto error;
+//
+//    if (!skip(curPtr, ']')) { // check outer.
+//        std::cout << "[Syntax error] For depth 1 outter array type\n";
+//        // TODO: To return 0, or to skip ahead?
 //    }
-    
     return entrySlot;
 }
 

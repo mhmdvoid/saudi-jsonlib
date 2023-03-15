@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sstream>
+
 namespace saudi_json {
 class JsonPrimitiveNode;
 class JsonNode;
@@ -36,7 +38,13 @@ class JsonNode {
     JsonNode(const JsonNode&);
     void operator=(const JsonNode&);
 public:
+    int k;
     JsonNode() {}
+    virtual std::string getString() {return 0;}
+//        std::stringstream ss;
+//        ss << "(" << point.x << ", " << point.y << ")";
+//        return ss.str();
+//    }
 };
 
 class BasicEntry {
@@ -46,7 +54,6 @@ public:
 //    JsonNode *nxt;
 //    int len;
 };
-
 
 class ArrayEntry: public BasicEntry {
     // doesn't have a key.
@@ -92,18 +99,43 @@ public:
     }
 };
 class JsonArrayValue: public JsonNode, public JsonRoot  {
+    
+    // depth will help us get our self away from ] stack error
+    // RefCount for depth problem.
+    unsigned depth {1};  // 1 means topmost outer
     bool isRoot;
     std::vector<JsonNode *> values;
 public:
+    
     JsonArrayValue() {}
     bool insertEntry(BasicEntry *entry) {
-        auto v = entry->value;
-        values.push_back(v);
+//        auto v = entry->value;
+        values.push_back(entry->value);
         return true;
     }
 
     void insertNode(JsonNode *value) {
         values.push_back(value);
+    }
+    
+    std::vector<JsonNode *> & getList() { return values; }
+    
+    // immediate redesign.
+    void printAll() const {
+        for (int i = 0; i < values.size(); i++) {
+            std::cout << i << std::endl;
+        }
+    }
+    std::string getString() override {
+        std::stringstream ss;
+        ss << "(" << "ArrayValue element" << ")\n";
+        std::cout << ss.str();
+             for (int i = 0; i < getList().size(); i++) {
+                 JsonNode* cur = getList()[i];
+                 //
+                 std::cout<< cur->getString();
+             }
+        return ss.str();
     }
 };
 
@@ -153,7 +185,11 @@ public:
         value = new char[s+1];
         memcpy(value, buff, s+1);
     }
-    
+    std::string getString()  override {
+        std::stringstream ss;
+        ss << "(" << value << ")\n";
+            return ss.str();
+    }
 };
 
 class JsonNumberNode: public JsonPrimitiveNode {
@@ -183,11 +219,36 @@ public:
     }
     bool isTrue() const { return is_true; }
     bool isFalse() const { return !is_true; }
+    std::string getString()  override {
+        std::stringstream ss;
+        char *f = "false";
+        if (isTrue()) {
+            f = "true";
+        }
+        ss << "(" << f << ")";
+        return ss.str();
+        
+    }
 private:
 
     /*Location &loc;*/
     bool is_true;
 };
+
+
+
+
+
+// TODO:
+// for nested structure
+//class Subtree {
+//    std::vector<JsonNode *> premitives; // str, bool, number.
+//    Subtree *nxt, *prev; // array_like;
+//    bool doWeHaveNestedStructure() const {
+//        return nxt != 0 || prev != 0;
+//    }
+//};
+
 
 }
 

@@ -31,7 +31,7 @@ public:
     
     JsonStringNode *parseJsonStringValue();
     void parseJsonObject();
-    BasicEntry *parseJsonArray();
+    BasicEntry *parseJsonArray(JsonArrayValue *parent);
     JsonBooleanNode *parseJsonBooleanLiteral();
     JsonNumberNode *parseJsonNumberLiteral();
     
