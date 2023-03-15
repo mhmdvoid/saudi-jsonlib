@@ -279,10 +279,14 @@ BasicEntry *Parser::parseJsonArray(JsonArrayValue *parent)   {
                 
                 parent->insertNode(current);
 //                current->prev = parent; // later.
-                
+                loop:
                 do {
                     skipWhitespace(curPtr);
                     switch (*curPtr++) {
+                        case ',':
+                            // we're already ahead of ourself by one;
+                            --curPtr;
+                            break;
                         case 't': case 'f':
                             current->insertNode(parseJsonBooleanLiteral());
                             break;
@@ -291,14 +295,30 @@ BasicEntry *Parser::parseJsonArray(JsonArrayValue *parent)   {
                             goto start;
                             
                         default:
+                            char *possible_bracket = curPtr-1;
+                            if (*possible_bracket == ']') --curPtr;
                             break;
+                    }
+                    if (skip(curPtr, ']')) {
+                        //
+                        if (stack.size() != 0) {
+                            parent = stack.back(); // Access last_element.
+                            stack.pop_back();
+                            current = parent;
+                            goto loop;
+                        }
                     }
                 } while(skip(curPtr, ','));
                 
                 break;
         }
     
-    
+  
+//    parent;
+    for (int i = 0; i < parent->getList().size(); ++i) {
+        auto cur = parent->getList()[i];
+        cur->getString();
+    }
 //
 //    if (!skip(curPtr, ']')) { // check outer.
 //        std::cout << "[Syntax error] For depth 1 outter array type\n";
@@ -321,7 +341,7 @@ JsonBooleanNode *Parser::parseJsonBooleanLiteral() {
         binResult = new JsonBooleanNode("true");
         binResult->setValue(true);
     }
-    if (strncmp(beg, "false", curPtr-beg) == 0) {
+    else if (strncmp(beg, "false", curPtr-beg) == 0) {
         binResult = new JsonBooleanNode("false");
         binResult->setValue(false);
     }

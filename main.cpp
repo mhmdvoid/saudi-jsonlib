@@ -15,7 +15,13 @@ int main(int argc, const char * argv[]) {
 //                        "\"foo\": true\n"
 //    "]";
 //
-    saudi_json::Parser parser {"[\"foo\", [true, [false, true]]  ]"};
+    
+    
+    // [    true,     [  true,[false, [false], false]           ]
+    
+    
+    
+    saudi_json::Parser parser {"[     true ,    [true,   [false, [false], false]          ],   true,    [false,  [true]      ]      ]"};
     if (parser.parseJsonDecl())
         std::cout << "Error found\n";
     return 0;

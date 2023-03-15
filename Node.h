@@ -128,8 +128,8 @@ public:
     }
     std::string getString() override {
         std::stringstream ss;
-        ss << "(" << "ArrayValue element" << ")\n";
-        std::cout << ss.str();
+        ss << "(" << "[" << ")\n";
+//        std::cout << ss.str();
              for (int i = 0; i < getList().size(); i++) {
                  JsonNode* cur = getList()[i];
                  //
@@ -225,7 +225,7 @@ public:
         if (isTrue()) {
             f = "true";
         }
-        ss << "(" << f << ")";
+        ss << "(" << f << ")\n";
         return ss.str();
         
     }
