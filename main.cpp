@@ -20,8 +20,7 @@ int main(int argc, const char * argv[]) {
     // [    true,     [  true,[false, [false], false]           ]
     
     
-    
-    saudi_json::Parser parser {"[     true ,    [true,   [false, [false], false]          ],   true,    [false,  [true]      ]      ]"};
+    saudi_json::Parser parser {"[   [     true, [false], {.........}, {}     ]        ]"};
     if (parser.parseJsonDecl())
         std::cout << "Error found\n";
     return 0;

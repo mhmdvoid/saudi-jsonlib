@@ -236,8 +236,19 @@ JsonStringNode *Parser::parseJsonStringValue()  {
     
 }
 
-static std::vector<JsonArrayValue*> stack;
-void Parser::parseJsonObject()  {}
+
+
+// just like parseArray.  this is one call which returns a single [could be giant, i.e. nested] entry.
+JsonObjectValue *Parser::parseJsonObject()  {
+    
+    skipWhitespace(curPtr);
+    char *beg = curPtr-1;
+    
+    BasicEntry *entrySlot = new BasicEntry(); // this will be one entry which can be nested!;
+    
+    return (JsonObjectValue *)entrySlot->value;
+    
+}
 BasicEntry *Parser::parseJsonArray(JsonArrayValue *parent)   {
     // parseJsonArray: if no nested structire found, is on demand parsing method.
     // one call one array basic_value
@@ -248,7 +259,6 @@ BasicEntry *Parser::parseJsonArray(JsonArrayValue *parent)   {
 
 //    assert(*beg == '[' && "Json array doesn't start [ !!");
     
-    int Depth = 1;
     // We're sure weather we're coming from a root_array or object_value.
     
     BasicEntry *entrySlot = new BasicEntry(); // This is actually outter value. depth 1;
@@ -269,61 +279,75 @@ BasicEntry *Parser::parseJsonArray(JsonArrayValue *parent)   {
                 return entrySlot;
 
             case '{':
+                entrySlot->value = parseJsonObject();
                 break; // Json object;
             case '[':
-                
-                start:
-                stack.push_back(parent);
-                
-                auto current = new JsonArrayValue();
-                
-                parent->insertNode(current);
-//                current->prev = parent; // later.
-                loop:
-                do {
+                int depth = 2;   // move to stack encapsulation
+                JsonArrayValue *outter = new JsonArrayValue();
+                std::vector<JsonArrayValue *> stack;
+                entrySlot->value = outter;
+                stack.push_back(outter);
+                auto current = stack.back();
+                int de = 2;
+                while (1) {
+                    auto siblingEntry = new BasicEntry();  // this is extensive. malloc, and dealloc for every sibling && `,` comma character [see: case ','].
                     skipWhitespace(curPtr);
                     switch (*curPtr++) {
-                        case ',':
-                            // we're already ahead of ourself by one;
-                            --curPtr;
-                            break;
-                        case 't': case 'f':
-                            current->insertNode(parseJsonBooleanLiteral());
-                            break;
-                        case '[':
-                            parent = current;
-                            goto start;
+                        default: {
                             
-                        default:
-                            char *possible_bracket = curPtr-1;
-                            if (*possible_bracket == ']') --curPtr;
+                            // FIXME: What is this ??!  this is not practical as we passed curPtr buffer!.
+                                                    
+                            auto missing_bracket = de - depth;
+                            
+                            std::cout << "You're missing " << de - missing_bracket << " closing bracket ]\n";
+                            return entrySlot; // error.
+                        }
+                            
+                        case '\"':
+                            siblingEntry->value = parseJsonStringValue();
+                            current->insertEntry(siblingEntry);
+                            break;
+                        case '{':
+                            siblingEntry->value = parseJsonObject();
+                            current->insertEntry(siblingEntry);
+                            break;
+                        case '[': { // sibling to other cases.   this makes it easy. Why? Well as you can tell you have one big [ ] any thing else is nested from single parent.
+                            
+                            JsonArrayValue *nested = new JsonArrayValue();
+                            siblingEntry->value = nested;
+                            current->insertEntry(siblingEntry);
+                            stack.push_back(nested);
+                            current = stack.back();
+                            ++depth;
+                            ++de;
+                            break;
+                        }
+                        case ']':
+                            --depth; // if depth reach one(1). then we reach topmost closing.
+                            stack.pop_back();
+                            if (stack.size() == 0)  // 0 means we reach ] of the main outter entry.
+                                goto cleanup_outter;
+                            
+                            current = stack.back();
+                            break;
+                        case ',':
+                            // FIXME: nested_entry memory leak.
+                            continue;
+                        case 't': case 'f':
+                            siblingEntry->value = parseJsonBooleanLiteral();
+                            current->insertEntry(siblingEntry);
                             break;
                     }
-                    if (skip(curPtr, ']')) {
-                        //
-                        if (stack.size() != 0) {
-                            parent = stack.back(); // Access last_element.
-                            stack.pop_back();
-                            current = parent;
-                            goto loop;
-                        }
-                    }
-                } while(skip(curPtr, ','));
-                
+                }
                 break;
         }
     
-  
-//    parent;
-    for (int i = 0; i < parent->getList().size(); ++i) {
-        auto cur = parent->getList()[i];
-        cur->getString();
+    cleanup_outter:
+    // we only reach here for nested array.
+    if (!skip(curPtr, ']')) { // check outer.
+        std::cout << "[Syntax error] For depth 1 outter array type\n";
+        
     }
-//
-//    if (!skip(curPtr, ']')) { // check outer.
-//        std::cout << "[Syntax error] For depth 1 outter array type\n";
-//        // TODO: To return 0, or to skip ahead?
-//    }
     return entrySlot;
 }
 
