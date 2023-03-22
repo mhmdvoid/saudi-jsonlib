@@ -103,18 +103,29 @@ class JsonArrayValue: public JsonNode, public JsonRoot  {
     // depth will help us get our self away from ] stack error
     // RefCount for depth problem.
     unsigned depth {1};  // 1 means topmost outer
-    bool isRoot;
+    unsigned size {0};
     std::vector<JsonNode *> values;
 public:
     
     JsonArrayValue() {}
+
+    
+    Location rightBracketLocation;
+    bool isRoot;
+    
+    
+    unsigned getSize() const { return size; }
+//    explicit JsonArrayValue(Location &l, Location &r): leftBracketLocation(l), rightBracketLocation(r) {}
+
     bool insertEntry(BasicEntry *entry) {
 //        auto v = entry->value;
+        size ++;
         values.push_back(entry->value);
         return true;
     }
 
     void insertNode(JsonNode *value) {
+        size ++;
         values.push_back(value);
     }
     
@@ -128,14 +139,18 @@ public:
     }
     std::string getString() override {
         std::stringstream ss;
-        ss << "(" << "[" << ")\n";
-//        std::cout << ss.str();
+        char * e = "ArrayElement";
+        if (isRoot) {
+            e = "Root";
+        }
+        ss << "(" << e << ")\n";
+        std::cout << ss.str();
              for (int i = 0; i < getList().size(); i++) {
                  JsonNode* cur = getList()[i];
                  //
                  std::cout<< cur->getString();
              }
-        return ss.str();
+        return "";
     }
 };
 

@@ -20,23 +20,35 @@ public:
     explicit Parser(char *src): curPtr(src), beg(src), line(0), col(0) {}
     
     
+    // Recursive.
+    bool isStartOfValue();  // FIXME: 
     
     
-    // entry point.
-    bool parseJsonDecl(); // init.
+    bool parsePrimaryValue(BasicEntry *node/*parent?*/);
     
-    // handlers.
-    bool parseJsonString(char *keyIdnetifier);
-    JsonNode *parseJsonValue();
+    // single-value
+    bool parseSingleValue(BasicEntry *subnode);
     
-    JsonStringNode *parseJsonStringValue();
+    JsonArrayValue *parseJsonArray();
     JsonObjectValue *parseJsonObject();
+
     BasicEntry *parseJsonArray(JsonArrayValue *parent);
+
+
+    
+    
+    // Key
+    bool parseJsonString(char *keyIdnetifier);
+    
+    
+    // json values.
+    JsonStringNode *parseJsonStringValue();
+
     JsonBooleanNode *parseJsonBooleanLiteral();
     JsonNumberNode *parseJsonNumberLiteral();
-    
-private:
     char *curPtr; // current token.
+private:
+   
     char *beg;// TODO: FILE BUFFER
     Line line;
     Column col;

@@ -25,6 +25,7 @@ using namespace saudi_json;
  */
 namespace {
 
+
 void skipWhitespace(char *&pointer) {
     while (*pointer == ' ' || *pointer == '\t' || *pointer == '\n')
         ++pointer;
@@ -49,9 +50,14 @@ bool skip(char *&pointer, char token) {
     return false;
     
 }
+void skipUntil(char *&curPtr, char tkn) {
+    while (*curPtr != '\0' && *curPtr != tkn) {
+        skip(curPtr, tkn);
+    }
+}
 
 
-bool validJsonKey(const char c) {
+bool validateJsonString(const char c) {
     switch (c) {
         case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         case 'g': case 'h': case 'i': case 'j': case 'k':
@@ -65,6 +71,7 @@ bool validJsonKey(const char c) {
         case 'L': case 'M': case 'N': case 'O': case 'P':
         case 'Q': case 'R': case 'S': case 'T': case 'U':
         case 'V': case 'W': case 'X': case 'Y': case 'Z':
+        case ' ': case '\t': case '\\':
             return true;
             
         default:
@@ -73,10 +80,10 @@ bool validJsonKey(const char c) {
     return false;
 }
 bool lexIdentifier(char *beg, char *&ptr, char *keyContainer) {
-    if (!validJsonKey(*beg))
+    if (!validateJsonString(*beg))
         return true; // your json key string starts with an invalid state.
     unsigned defaultMax = 0;
-    while (validJsonKey(*ptr) && defaultMax++ < 256)
+    while (validateJsonString(*ptr) && defaultMax++ < 256)
         ++ptr;
     
     
@@ -98,68 +105,161 @@ bool valueDigit(char c) {
 } // end anonymous namesapce
 
 
+JsonObjectValue *Parser::parseJsonObject() {
+    if (!match(curPtr, '{')) {
+        std::cout << "Your json doesn't start with [ opening array root\n";
+        return 0;  // fail
+    }
+    auto entry_root = new BasicEntry();
 
-
-bool Parser::parseJsonDecl() {
+    bool parseResult = parsePrimaryValue(entry_root);
     
-    JsonRoot *root = 0;
-    bool isArray = false;
-    char *slice = curPtr;
-    if (skip(curPtr, '{') || skip(curPtr, '[')) {
-        if (*slice == '[') {
-            // now we
-            root = new JsonArrayValue(); // null otherwise
-            isArray = true;
-            do {
+    if (entry_root->value == 0/* || cast(value) != arrayValue*/ || parseResult) {
+        std::cout << "A top level parsing error has happend\n";
+    }
+    
+    return (JsonObjectValue *)entry_root->value;
+}
+
+JsonArrayValue *Parser::parseJsonArray() {
+    
+    
+    if (!match(curPtr, '[')) {
+        std::cout << "Your json doesn't start with [ opening array root\n";
+        return 0;  // fail
+    }
+    auto entry_root = new BasicEntry();
+
+    
+    bool parseResult = parsePrimaryValue(entry_root);
+    
+    if (entry_root->value == 0/* || cast(value) != arrayValue*/ || parseResult) {
+        std::cout << "A top level parsing error has happend\n";
+    }
+    // TODO: if not eof, expecting eof or something
+    return (JsonArrayValue *)entry_root->value;
+}
+
+
+bool Parser::isStartOfValue() { return false; } // TODO:
+
+// single-value.
+bool Parser::parseSingleValue(BasicEntry *subNode) {
+    if (parsePrimaryValue(subNode)) {
+        std::cout << "Error\n";
+        return true; // fail
+    }
+    return false;
+}
+
+
+bool Parser::parsePrimaryValue(BasicEntry *node) {
+    skipWhitespace(curPtr);
+    switch (*curPtr) {
+        default: // Handle unknown cases.
+            break;
+            
+        case '\"':
+            curPtr++;
+            node->value = parseJsonStringValue();
+            break;
+        case 't': case 'f':
+            curPtr++;
+            node->value = parseJsonBooleanLiteral();
+            break;
+            
+        case '{': { // main loop for array
+            auto leftLoc = beg - curPtr;
+            skip(curPtr, '{');
+
+            auto nestedObject = new JsonObjectValue(); // malloc.
+            
+            node->value = nestedObject; // move the heap to owning pointer.
+            bool foundError = false;
+            if (!match(curPtr, '}')) {
                 
                 
-                auto value = parseJsonArray((JsonArrayValue*)root);
-                root->insertEntry(value);
+                // We parse key then : then a value for once. then do ,
+                char *start = curPtr;
+                char keyContainer[256]; // TODO: Move to identifier object.
                 
-            } while (skip(curPtr, ','));
-            goto clean;;
-        }
-        do {
-            char *start = curPtr;
-            char keyContainer[256]; // TODO: Move to identifier object.
-            // parseJsonDecl allocates 256 bytes on stack
-            
-            
-            
-            if (parseJsonString(keyContainer) && !skip(curPtr, ':')) {
-                // FIXME: Memory leak.
-                return true; // FIXME: this propegates the erorr, failur
+                
+                
+                // parsing the key
+                if (parseJsonString(keyContainer) && !skip(curPtr, ':')) {
+                    // FIXME: Memory leak.
+                    std::cout << "Expect json_key followed by `:`\n";
+                    return true; // FIXME: this propegates the erorr, failur
+                }
+                JsonObjectEntry* entry = new JsonObjectEntry(keyContainer);
+                //
+                if (parseSingleValue(entry/*, expected value in []*/)) {
+                    std::cout << "Expect value error\n";
+                    
+                    return true; // fail yes.
+                }
+                nestedObject->insertEntry(entry);
+                
+                while (match(curPtr, ',')) {
+                    curPtr++;
+                    
+                    // FIXME: Parse key for nested
+                    entry->value = 0;
+                    if (parseSingleValue(entry)) {
+                        std::cout << "Trailing comma error\n";
+                        
+                        return true; // trailing_comma.
+                    }
+                    nestedObject->insertEntry(entry);
+                }
             }
-            JsonObjectEntry* entry = new JsonObjectEntry(keyContainer);
             
-            
-            JsonNode *node = parseJsonValue();
-            
-            // call parse_object if no object starter found, then immediely exit. and tell where we stop
-            if (node == 0) {
-                // FIXME: Memory leak.
+            if (!skip(curPtr, '}')) {
+                std::cout << "expected ']' in json expression\n";
                 return true;
             }
-            entry->value = node;
-//            global_root.object_root->entries.push_back(entry);
-        } while(skip(curPtr, ','));
+            
+            break;
+        }
+        case '[': // main loop for array
+            
+            auto leftLoc = beg - curPtr;
+            skip(curPtr, '[');
+            auto nestedArray = new JsonArrayValue(); // malloc.
+            node->value = nestedArray; // move the heap to owning pointer.
+            bool foundError = false;
+            if (!match(curPtr, ']')) {
+                // todo: jsonNode;
+                auto js = new BasicEntry(); // malloc sibling entry.
+                // into a mainstream one.
+                
+                if (parseSingleValue(js/*, expected value in []*/)) {
+                    std::cout << "Expect value error\n";
+
+                    return true; // fail yes.
+                }
+                nestedArray->insertNode(js->value);
+                
+                while (match(curPtr, ',')) {
+                    ++curPtr;
+                    js->value = 0;
+                    if (parseSingleValue(js)) {
+                        std::cout << "Trailing comma error\n";
+
+                        return true; // trailing_comma.
+                    }
+                    nestedArray->insertNode(js->value);
+                }
+            }
+            
+            if (!skip(curPtr, ']')) {
+                std::cout << "expected ']' in json expression\n";
+                return true;
+            }
+            break;
+        
     }
-    clean:
-    auto js = (JsonArrayValue*) root;
-    js->printAll();
-//    endTopLevelDecl:
-//    if (isArray) { // FIXME: move to union pointer.
-//        if (!skip(curPtr, ']')) {
-//            return true;
-//        }
-//    } else {
-//        if (!skip(curPtr, '}')) {
-//            return true;
-//        }
-//    }
-//    assert(*curPtr == '\0' && "json ends!");
-//    global_root.object_root->printAll();
-    return false;
+    return false;  // fail no
 }
 
 bool Parser::parseJsonString(char *keyContainer) {
@@ -174,42 +274,7 @@ bool Parser::parseJsonString(char *keyContainer) {
     return true;
 }
 
-JsonNode *Parser::parseJsonValue() {
-    skipWhitespace(curPtr);
-    char *beg = curPtr;
-    JsonNode *nodeValue = 0;
-    switch (*curPtr++) {
-        default:
-            break;
-        case '\"':
-            nodeValue = parseJsonStringValue();  // FIXME: _
-            break;
-        case '{':
-            parseJsonObject();
-            break;
-        case '[':
-            // array value
-//            auto parent = new JsonArrayValue();
-            parseJsonArray(0);
-            break;
-        case '0': case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7': case '8': case '9':
-            // number value
-            
-            
-            nodeValue = parseJsonNumberLiteral();
-            // if node value is null, then error parsin;
-            break;
-        
-        case 't': case 'f': // possible true/false literal
-            
-            nodeValue = parseJsonBooleanLiteral();
-            break;
-         
-    }
-    
-    return nodeValue;
-}
+
 JsonStringNode *Parser::parseJsonStringValue()  {
 
 
@@ -217,7 +282,7 @@ JsonStringNode *Parser::parseJsonStringValue()  {
     if (!skip(beg, '\"'))
         return 0;
     
-    while (validJsonKey(*curPtr))
+    while (validateJsonString(*curPtr))
         ++curPtr;
     
     assert(*curPtr == '\"' && "doesn't escape \" char!");
@@ -235,129 +300,13 @@ JsonStringNode *Parser::parseJsonStringValue()  {
     return node;
     
 }
-
-
-
-// just like parseArray.  this is one call which returns a single [could be giant, i.e. nested] entry.
-JsonObjectValue *Parser::parseJsonObject()  {
-    
-    skipWhitespace(curPtr);
-    char *beg = curPtr-1;
-    
-    BasicEntry *entrySlot = new BasicEntry(); // this will be one entry which can be nested!;
-    
-    return (JsonObjectValue *)entrySlot->value;
-    
-}
-BasicEntry *Parser::parseJsonArray(JsonArrayValue *parent)   {
-    // parseJsonArray: if no nested structire found, is on demand parsing method.
-    // one call one array basic_value
-    // if find nested structure we loop for every nested structure.
-    // this also true when we found a json_object {} which will be one call except that json is nested. which eventually we will be waiting.
-    skipWhitespace(curPtr);
-    char *beg = curPtr-1;
-
-//    assert(*beg == '[' && "Json array doesn't start [ !!");
-    
-    // We're sure weather we're coming from a root_array or object_value.
-    
-    BasicEntry *entrySlot = new BasicEntry(); // This is actually outter value. depth 1;
-//    Expecting 'STRING', 'NUMBER', 'NULL', 'TRUE', 'FALSE', '{', '[', ']'
-        skipWhitespace(curPtr);
-        switch (*curPtr++) {
-            default:
-//                goto error;
-                break;
-//
-            case '\"': // string value;
-                entrySlot->value = parseJsonStringValue();
-
-                return entrySlot;
-            case 't': case 'f':
-                
-                entrySlot->value = parseJsonBooleanLiteral();
-                return entrySlot;
-
-            case '{':
-                entrySlot->value = parseJsonObject();
-                break; // Json object;
-            case '[':
-                int depth = 2;   // move to stack encapsulation
-                JsonArrayValue *outter = new JsonArrayValue();
-                std::vector<JsonArrayValue *> stack;
-                entrySlot->value = outter;
-                stack.push_back(outter);
-                auto current = stack.back();
-                int de = 2;
-                while (1) {
-                    auto siblingEntry = new BasicEntry();  // this is extensive. malloc, and dealloc for every sibling && `,` comma character [see: case ','].
-                    skipWhitespace(curPtr);
-                    switch (*curPtr++) {
-                        default: {
-                            
-                            // FIXME: What is this ??!  this is not practical as we passed curPtr buffer!.
-                                                    
-                            auto missing_bracket = de - depth;
-                            
-                            std::cout << "You're missing " << de - missing_bracket << " closing bracket ]\n";
-                            return entrySlot; // error.
-                        }
-                            
-                        case '\"':
-                            siblingEntry->value = parseJsonStringValue();
-                            current->insertEntry(siblingEntry);
-                            break;
-                        case '{':
-                            siblingEntry->value = parseJsonObject();
-                            current->insertEntry(siblingEntry);
-                            break;
-                        case '[': { // sibling to other cases.   this makes it easy. Why? Well as you can tell you have one big [ ] any thing else is nested from single parent.
-                            
-                            JsonArrayValue *nested = new JsonArrayValue();
-                            siblingEntry->value = nested;
-                            current->insertEntry(siblingEntry);
-                            stack.push_back(nested);
-                            current = stack.back();
-                            ++depth;
-                            ++de;
-                            break;
-                        }
-                        case ']':
-                            --depth; // if depth reach one(1). then we reach topmost closing.
-                            stack.pop_back();
-                            if (stack.size() == 0)  // 0 means we reach ] of the main outter entry.
-                                goto cleanup_outter;
-                            
-                            current = stack.back();
-                            break;
-                        case ',':
-                            // FIXME: nested_entry memory leak.
-                            continue;
-                        case 't': case 'f':
-                            siblingEntry->value = parseJsonBooleanLiteral();
-                            current->insertEntry(siblingEntry);
-                            break;
-                    }
-                }
-                break;
-        }
-    
-    cleanup_outter:
-    // we only reach here for nested array.
-    if (!skip(curPtr, ']')) { // check outer.
-        std::cout << "[Syntax error] For depth 1 outter array type\n";
-        
-    }
-    return entrySlot;
-}
-
 // null is retunred if fail to parse json literal.
 JsonBooleanNode *Parser::parseJsonBooleanLiteral() {
     char* beg = curPtr-1;
-    if (!validJsonKey(*beg))
+    if (!validateJsonString(*beg))
         return 0;
     
-    while (validJsonKey(*curPtr))
+    while (validateJsonString(*curPtr))
         ++curPtr;
     
     JsonBooleanNode *binResult = 0;
@@ -395,5 +344,4 @@ JsonNumberNode *Parser::parseJsonNumberLiteral() {
     
     
     return numberResult;
-    
 }
