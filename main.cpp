@@ -21,7 +21,7 @@ int main(int argc, const char * argv[]) {
     
     
     char *buffer;
-    auto handler = fopen("source.json", "r");
+    auto handler = fopen("src.json", "r");
     long string_size, read_size;
     if (handler) {
         // Seek the last byte of the file
@@ -49,7 +49,7 @@ int main(int argc, const char * argv[]) {
             return 9;
         }
     
-        saudi_json::Parser parser {"{\"foo\":true}"};// this should fail. but how?
+        saudi_json::Parser parser {buffer};// this should fail. but how?
     
         auto my_object = parser.parseJsonObject();
 

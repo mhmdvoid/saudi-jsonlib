@@ -157,7 +157,8 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
     skipWhitespace(curPtr);
     switch (*curPtr) {
         default: // Handle unknown cases.
-            break;
+            return true;
+//            break;
             
         case '\"':
             curPtr++;
@@ -191,7 +192,7 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
                     std::cout << "Expect json_key followed by `:`\n";
                     return true; // FIXME: this propegates the erorr, failur
                 }
-                JsonObjectEntry* entry = new JsonObjectEntry(keyContainer);
+                JsonObjectEntry* entry = new JsonObjectEntry(keyContainer); // sibling.
                 //
                 if (parseSingleValue(entry/*, expected value in []*/)) {
                     std::cout << "Expect value error\n";
@@ -199,23 +200,36 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
                     return true; // fail yes.
                 }
                 nestedObject->insertEntry(entry);
-                
                 while (match(curPtr, ',')) {
                     curPtr++;
+                    skipWhitespace(curPtr);
                     
-                    // FIXME: Parse key for nested
-                    entry->value = 0;
+                    
+                    // TODO: What is this?!
+                    char *start = curPtr;
+                    char keyContainer[256]; // TODO: Move to identifier object.
+                    
+                    
+                    
+                    // parsing the key
+                    if (parseJsonString(keyContainer) && !skip(curPtr, ':')) {
+                        // FIXME: Memory leak.
+                        std::cout << "Expect json_key followed by `:`\n. Trailing comma";
+                        return true; // FIXME: this propegates the erorr, failur
+                    }
+                    entry = new JsonObjectEntry(keyContainer); // sibling.
+//                    entry->value = 0;
                     if (parseSingleValue(entry)) {
-                        std::cout << "Trailing comma error\n";
+                        std::cout << "missing value!\n";
                         
-                        return true; // trailing_comma.
+                        return true; // missing value after key.
                     }
                     nestedObject->insertEntry(entry);
                 }
             }
             
             if (!skip(curPtr, '}')) {
-                std::cout << "expected ']' in json expression\n";
+                std::cout << "expected '}' in json expression\n";
                 return true;
             }
             

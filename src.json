@@ -1,0 +1,34 @@
+{
+    "items":
+        {
+            "item":
+                [
+                    {
+                        "id": "foo",
+                        "type": "donut",
+                        "name": "Cake",
+                        "ppu": "foo",
+                        "batters":
+                            {
+                                "batter":
+                                    [
+                                        { "id": "true", "type": "Regular" },
+                                        { "id": "bar", "type": "Chocolate" },
+                                        { "id": "barfoo", "type": "Blueberry" },
+                                        { "id": "foobar", "type": "DevilFood" }
+                                    ]
+                            },
+                        "topping":
+                            [
+                                { "id": "false", "type": "None" },
+                                { "id": "false", "type": "Glazed" },
+                                { "id": "false", "type": "Sugar" },
+                                { "id": "true", "type": "PowderedSugar" },
+                                { "id": "false", "type": "ChocolatewithSprinkles" },
+                                { "id": "false", "type": "Chocolate" },
+                                { "id": "true", "type": "Maple" }
+                            ]
+                    },
+                ]
+        }
+}
