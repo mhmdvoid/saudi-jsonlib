@@ -46,6 +46,7 @@ public:
 
     JsonBooleanNode *parseJsonBooleanLiteral();
     JsonNumberNode *parseJsonNumberLiteral();
+    JsonNullNode   *parseJsonNull();
     char *curPtr; // current token.
 private:
    

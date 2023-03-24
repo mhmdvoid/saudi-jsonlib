@@ -50,6 +50,14 @@ bool skip(char *&pointer, char token) {
     return false;
     
 }
+
+bool skipWithMessage(char *&p, char t, const char *M) {
+    bool canSkip = skip(p, t);
+    if (canSkip)
+        return true;
+    std::cout << M << std::endl;
+    return false; // didn't skip.
+}
 void skipUntil(char *&curPtr, char tkn) {
     while (*curPtr != '\0' && *curPtr != tkn) {
         skip(curPtr, tkn);
@@ -59,19 +67,29 @@ void skipUntil(char *&curPtr, char tkn) {
 
 bool validateJsonString(const char c) {
     switch (c) {
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9': // numericals
+            
+        case ':': case ',': case '-': case '_': case '#':
+        case '%': case '$': case '!': case ';': case '^':
+        case '[': case '(': case '{': case ')': case ']':
+        case '&': case '*': case '+': case '/': case '@':
+        case '}': case '|': case '~': case '=': case '>':
+        case '?': case '<': case '.':  // panctuation
+            
         case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
         case 'g': case 'h': case 'i': case 'j': case 'k':
         case 'l': case 'm': case 'n': case 'o': case 'p':
         case 'q': case 'r': case 's': case 't': case 'u':
         case 'v': case 'w': case 'x': case 'y': case 'z':
-        case '0': case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7': case '8': case '9':
         case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
         case 'G': case 'H': case 'I': case 'J': case 'K':
         case 'L': case 'M': case 'N': case 'O': case 'P':
         case 'Q': case 'R': case 'S': case 'T': case 'U':
-        case 'V': case 'W': case 'X': case 'Y': case 'Z':
-        case ' ': case '\t': case '\\':
+        case 'V': case 'W': case 'X': case 'Y': case 'Z': // alphabet
+            
+            
+        case ' ': case '\t': case '\\': // escape
             return true;
             
         default:
@@ -79,13 +97,17 @@ bool validateJsonString(const char c) {
     }
     return false;
 }
+
+bool validateBoolean(const char c) {
+    return c == 't' || c == 'r' || c == 'u' || c == 'e' ||
+    c == 'f' || c == 'a' || c == 'l' || c == 's';
+}
 bool lexIdentifier(char *beg, char *&ptr, char *keyContainer) {
     if (!validateJsonString(*beg))
         return true; // your json key string starts with an invalid state.
     unsigned defaultMax = 0;
     while (validateJsonString(*ptr) && defaultMax++ < 256)
         ++ptr;
-    
     
 
     unsigned len = ptr-beg;
@@ -116,8 +138,11 @@ JsonObjectValue *Parser::parseJsonObject() {
     
     if (entry_root->value == 0/* || cast(value) != arrayValue*/ || parseResult) {
         std::cout << "A top level parsing error has happend\n";
+        return 0;
     }
-    
+    if (*curPtr != '\0') {
+        std::cout << "expecting eof, but got: " << curPtr << std::endl;
+    }
     return (JsonObjectValue *)entry_root->value;
 }
 
@@ -135,6 +160,11 @@ JsonArrayValue *Parser::parseJsonArray() {
     
     if (entry_root->value == 0/* || cast(value) != arrayValue*/ || parseResult) {
         std::cout << "A top level parsing error has happend\n";
+        return 0;
+    }
+    
+    if (*curPtr != '\0') {
+        std::cout << "expecting eof, but got: " << curPtr << std::endl;
     }
     // TODO: if not eof, expecting eof or something
     return (JsonArrayValue *)entry_root->value;
@@ -159,10 +189,18 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
         default: // Handle unknown cases.
             return true;
 //            break;
-            
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+            curPtr++;
+            node->value = parseJsonNumberLiteral();
+            break;
         case '\"':
             curPtr++;
             node->value = parseJsonStringValue();
+            break;
+        case 'n':
+            curPtr++;
+            node->value = parseJsonNull();
             break;
         case 't': case 'f':
             curPtr++;
@@ -187,15 +225,14 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
                 
                 
                 // parsing the key
-                if (parseJsonString(keyContainer) && !skip(curPtr, ':')) {
-                    // FIXME: Memory leak.
+                if (parseJsonString(keyContainer) || !skip(curPtr, ':')) { // or means rhs will be always checked unless lhs == true.
                     std::cout << "Expect json_key followed by `:`\n";
                     return true; // FIXME: this propegates the erorr, failur
                 }
                 JsonObjectEntry* entry = new JsonObjectEntry(keyContainer); // sibling.
                 //
                 if (parseSingleValue(entry/*, expected value in []*/)) {
-                    std::cout << "Expect value error\n";
+                    std::cout << "Expect object value error\n";
                     
                     return true; // fail yes.
                 }
@@ -212,7 +249,7 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
                     
                     
                     // parsing the key
-                    if (parseJsonString(keyContainer) && !skip(curPtr, ':')) {
+                    if (parseJsonString(keyContainer) || !skip(curPtr, ':')) {
                         // FIXME: Memory leak.
                         std::cout << "Expect json_key followed by `:`\n. Trailing comma";
                         return true; // FIXME: this propegates the erorr, failur
@@ -229,7 +266,7 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
             }
             
             if (!skip(curPtr, '}')) {
-                std::cout << "expected '}' in json expression\n";
+                std::cout << "expected '}' in json expression. But got: " << curPtr << " instead\n";
                 return true;
             }
             
@@ -248,7 +285,7 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
                 // into a mainstream one.
                 
                 if (parseSingleValue(js/*, expected value in []*/)) {
-                    std::cout << "Expect value error\n";
+                    std::cout << "Expect array value error\n";
 
                     return true; // fail yes.
                 }
@@ -258,7 +295,7 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
                     ++curPtr;
                     js->value = 0;
                     if (parseSingleValue(js)) {
-                        std::cout << "Trailing comma error\n";
+                        std::cout << "Trailing comma array error\n";
 
                         return true; // trailing_comma.
                     }
@@ -276,16 +313,16 @@ bool Parser::parsePrimaryValue(BasicEntry *node) {
     return false;  // fail no
 }
 
+// this is called for json_key
 bool Parser::parseJsonString(char *keyContainer) {
-    if (!skip(curPtr, '\"'))
+    if (!skipWithMessage(curPtr, '\"', "expected qouted key"))
         return true; // json key start "
     
     char *beg = curPtr;
-    
-    if (!lexIdentifier(beg, curPtr, keyContainer) && !skip(curPtr, '\"'))
-        return false; // fail to lex identifer & ";
-    
-    return true;
+    if (lexIdentifier(beg, curPtr, keyContainer))
+        return true; // can't lex a correct key.
+    assert(*curPtr++ == '\"' && "json key doesn't end with \". unquouted key at the end!");
+    return false;
 }
 
 
@@ -293,7 +330,7 @@ JsonStringNode *Parser::parseJsonStringValue()  {
 
 
     char *beg = curPtr-1;
-    if (!skip(beg, '\"'))
+    if (!skipWithMessage(beg, '\"', "undexpected unquoted_key..."))
         return 0;
     
     while (validateJsonString(*curPtr))
@@ -317,10 +354,10 @@ JsonStringNode *Parser::parseJsonStringValue()  {
 // null is retunred if fail to parse json literal.
 JsonBooleanNode *Parser::parseJsonBooleanLiteral() {
     char* beg = curPtr-1;
-    if (!validateJsonString(*beg))
+    if (!validateBoolean(*beg))
         return 0;
     
-    while (validateJsonString(*curPtr))
+    while (validateBoolean(*curPtr))
         ++curPtr;
     
     JsonBooleanNode *binResult = 0;
@@ -332,7 +369,6 @@ JsonBooleanNode *Parser::parseJsonBooleanLiteral() {
         binResult = new JsonBooleanNode("false");
         binResult->setValue(false);
     }
-    
     return binResult;
 }
 
@@ -359,3 +395,23 @@ JsonNumberNode *Parser::parseJsonNumberLiteral() {
     
     return numberResult;
 }
+JsonNullNode *Parser::parseJsonNull() {
+    char *beg = curPtr-1;
+    if (*beg != 'n') {
+        std::cout << "null value must start with n char\n";
+        return 0;
+    }
+    
+    
+    while (*curPtr == 'u' || *curPtr == 'l')
+        ++curPtr;
+
+    
+    if (strncmp(beg, "null", 4) != 0) {
+        std::cout << "null Error\n";
+        return 0;
+    }
+    
+    return new JsonNullNode("null");
+}
+

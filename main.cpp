@@ -21,7 +21,7 @@ int main(int argc, const char * argv[]) {
     
     
     char *buffer;
-    auto handler = fopen("src.json", "r");
+    auto handler = fopen("fail7.json", "r");
     long string_size, read_size;
     if (handler) {
         // Seek the last byte of the file
@@ -49,12 +49,16 @@ int main(int argc, const char * argv[]) {
             return 9;
         }
     
-        saudi_json::Parser parser {buffer};// this should fail. but how?
+        saudi_json::Parser parser {"[\"Extra close\"]]"};// this should fail. but how?
     
-        auto my_object = parser.parseJsonObject();
+        auto my_obarject = parser.parseJsonArray();
 
 //         Always remember to close the file.
         fclose(handler);
     }
+    
+        saudi_json::Parser parser {"[nullable]"};// this should fail. but how?
+    
+    auto my_obarject = parser.parseJsonArray();
     return 0;
 }

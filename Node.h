@@ -207,6 +207,10 @@ public:
     }
 };
 
+class JsonNullNode: public JsonPrimitiveNode {
+public:
+    JsonNullNode(char *v): JsonPrimitiveNode(v) {}
+};
 class JsonNumberNode: public JsonPrimitiveNode {
     
 public:
